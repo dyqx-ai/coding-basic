@@ -1,0 +1,271 @@
+# ============================================================================
+#                    VibeCoding AI 全局配置文件
+# ============================================================================
+# 说明：本配置文件按功能模块分区，每个区域的配置属于对应子图/模式
+# ============================================================================
+
+# ============================================================================
+# 第一部分：全局共享配置（所有子图共用）
+# ============================================================================
+shared:
+  # ---------- Docker 沙箱配置 ----------
+  sandbox_image: "sandbox-web:v1"
+  single_sandbox_timeout: 240
+  main_sandbox_timeout: 300
+  vendor_mount_path: "/tmp/vendor"
+
+  # ---------- Docker 不可用时的兜底策略 ----------
+  # Docker 没启动时，是否用本地 Python 直接跑顶层主测：
+  #   true  = 忘开 Docker 也能在本机真实跑一遍顶层业务（不跳过主测）
+  #   false = Docker 不可用就直接跳过主测
+  local_run_fallback: true
+  # 本地兜底使用的 Python 解释器路径（留空 "" 则用当前运行服务的 Python）
+  local_python: ""
+  # Docker 连接失败后自动重连的冷却秒数：中途打开 Docker 后，最迟这么久自动恢复，无需重启服务
+  docker_retry_cooldown: 20
+
+  # ---------- PyPI 镜像源配置 ----------
+  pip_index_url: "https://mirrors.aliyun.com/pypi/simple/"
+  pip_mirrors:
+    - index_url: "https://mirrors.aliyun.com/pypi/simple/"
+      trusted_host: "mirrors.aliyun.com"
+    - index_url: "https://pypi.tuna.tsinghua.edu.cn/simple/"
+      trusted_host: "pypi.tuna.tsinghua.edu.cn"
+    - index_url: "https://pypi.org/simple/"
+      trusted_host: "pypi.org"
+  pip_trusted_host: "mirrors.aliyun.com"
+  pip_max_retries: 3
+  pip_retry_delay: 5
+
+  # ---------- 镜像预装依赖列表 ----------
+  preinstalled_pip:
+    - "requests==2.31.0"
+    - "urllib3==2.3.0"
+    - "trafilatura[all]==1.12.0"
+    - "newspaper3k==0.2.8"
+    - "beautifulsoup4==4.12.3"
+    - "lxml==5.3.0"
+    - "flask==3.0.3"
+    - "fastapi==0.112.2"
+    - "uvicorn[standard]==0.30.6"
+    - "pydantic==2.8.2"
+    - "pyyaml==6.0.2"
+    - "toml==0.10.2"
+    - "python-dateutil==2.9.0.post0"
+    - "html2text==2024.2.26"
+
+  # ---------- 模块名 → pip 包名映射 ----------
+  module_to_pip:
+    "bs4": "beautifulsoup4"
+    "yaml": "pyyaml"
+    "cv2": "opencv-python"
+    "PIL": "pillow"
+
+  # ---------- 模型输出重试配置 ----------
+  model_output_retry:
+    default: 2
+    critical_retry: 3
+    normal_retry: 2
+    light_retry: 2
+    judge_retry: 1
+    overrides:
+      intention_retry: 1
+      memory_retry: 1
+
+# ============================================================================
+# 第二部分：子图1（完整工程模式）专属配置
+# ============================================================================
+create_runtime:
+  max_clarify_loop_steps: 3
+  default_temperature: 0.1
+  unit_test_max_retry: 3
+  main_test_max_retry: 3
+
+create_project_path: "C:/Users/遥望之处是星海/Desktop/资料/Day 2/my_project/new_project"
+
+# ---------- 完整模式使用的模型（共7个） ----------
+ask_model:
+  model_provider: "ali"
+  model_name: "qwen-plus"
+  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  timeout: 60
+  max_retries: 2
+
+front_plan_model_one:
+  model_provider: "ali"
+  model_name: "qwen-plus"
+  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  timeout: 180
+  max_retries: 2
+
+front_plan_model_two:
+  model_provider: "deepseek"
+  model_name: "deepseek-v4-flash"
+  base_url: "https://api.deepseek.com/v1"
+  timeout: 180
+  max_retries: 2
+
+back_plan_model:
+  model_provider: "deepseek"
+  model_name: "deepseek-v4-pro"
+  base_url: "https://api.deepseek.com/v1"
+  timeout: 180
+  max_retries: 2
+
+code_generate_model:
+  model_provider: "deepseek"
+  model_name: "deepseek-v4-flash"
+  base_url: "https://api.deepseek.com/v1"
+  temperature: 0.2
+  timeout: 180
+  max_retries: 2
+
+test_fix_model:
+  model_provider: "deepseek"
+  model_name: "deepseek-v4-pro"
+  base_url: "https://api.deepseek.com/v1"
+  temperature: 0.1
+  timeout: 180
+  max_retries: 2
+
+test_judge_model:
+  model_provider: "ali"
+  model_name: "qwen-plus"
+  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  temperature: 0.0
+  timeout: 120
+  max_retries: 2
+
+# ============================================================================
+# 第三部分：子图2（代码修改模式）专属配置
+# ============================================================================
+change_project_path: "C:/Users/遥望之处是星海/Desktop/资料/Day 2/my_project/complete/web_crawler_demo"
+
+analyze_change_model:
+  model_provider: "deepseek"
+  model_name: "deepseek-v4-flash"
+  base_url: "https://api.deepseek.com/v1"
+  timeout: 120
+  max_retries: 2
+
+file_summary_model:
+  model_provider: "deepseek"
+  model_name: "deepseek-v4-flash"
+  base_url: "https://api.deepseek.com/v1"
+  timeout: 120
+  max_retries: 2
+
+code_change_model:
+  model_provider: "deepseek"
+  model_name: "deepseek-v4-flash"
+  base_url: "https://api.deepseek.com/v1"
+  timeout: 180
+  max_retries: 2
+
+change_test_fix_model:
+  model_provider: "ali"
+  model_name: "qwen3.7-plus"
+  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  temperature: 0.1
+  timeout: 120
+  max_retries: 2
+
+change_test_judge_model:
+  model_provider: "ali"
+  model_name: "qwen-plus"
+  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  temperature: 0.0
+  timeout: 120
+  max_retries: 2
+
+change_test_runtime:
+  unit_max_retry: 3
+  main_max_retry: 3
+  common_entry_files:
+    - "main.py"
+    - "app.py"
+    - "run.py"
+    - "cli.py"
+    - "src/main.py"
+    - "src/app.py"
+
+change_max_loop: 5
+
+# ============================================================================
+# 第四部分：主图专属配置（main_graph.py）
+# ============================================================================
+main_runtime:
+  compression:
+    enabled: true
+    max_messages: 15
+    max_tokens: 8000
+    keep_recent_messages: 5
+
+  demo_mode:
+    enabled: true
+    max_retry: 3
+    max_files: 10
+    enable_sandbox: true
+    continue_on_failure: true
+    max_clarify_round: 5
+
+  simple_mode:
+    enabled: true
+    output_filename: "simple_project.py"
+
+# ---------- 主图使用的模型（2个） ----------
+final_confirm_intention_model:
+  model_provider: "ali"
+  model_name: "qwen-plus"
+  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  timeout: 60
+  max_retries: 2
+
+chat_model:
+  model_provider: "ali"
+  model_name: "qwen-plus"
+  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  timeout: 60
+  max_retries: 2
+
+# ============================================================================
+# 第五部分：各模式独立代码生成模型
+# ============================================================================
+simple_generate_model:
+  model_provider: "ali"
+  model_name: "qwen-turbo"
+  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  temperature: 0.1
+  timeout: 30
+  max_retries: 2
+
+demo_generate_model:
+  model_provider: "ali"
+  model_name: "qwen-plus"
+  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  temperature: 0.2
+  timeout: 120
+  max_retries: 2
+
+# ============================================================================
+# 第六部分：模式判断评分卡配置（mode_judge）
+# ============================================================================
+mode_judge:
+  # ---------- 模式阈值 ----------
+  thresholds:
+    complete_min: 10
+    demo_min: 5
+    simple_min: 0
+
+  # ---------- 模糊区间 ----------
+  fuzzy_zone:
+    low: 5
+    high: 9
+
+# ---------- 模式判断兜底模型 ----------
+mode_judge_llm:
+  model_provider: "ali"
+  model_name: "qwen-turbo"
+  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  timeout: 60
+  max_retries: 2

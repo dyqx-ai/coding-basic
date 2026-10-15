@@ -1,0 +1,24 @@
+# =============== my_vibecoding 依赖清单（从源码 import 反推 + my_config.yaml 中 docker预装补充） ===============
+# ---- Web 服务层 ----
+flask>=2.3.0
+
+# ---- LLM / LangGraph 全家桶 ----
+langgraph>=0.2.0
+langchain-core>=0.3.0
+langchain-openai>=0.2.0
+
+# ---- 数据模型 / 校验 ----
+pydantic>=2.5.0
+
+# ---- 配置管理 ----
+pyyaml>=6.0
+python-dotenv>=1.0.0
+
+# ---- Docker 沙箱控制 ----
+docker>=7.0.0
+
+# ---- 生成的项目可能用到（按需添加，避免完整工程模式生成后运行缺库；与 my_config.yaml 预装依赖对齐） ----
+openpyxl>=3.1.0
+pandas>=2.0.0
+numpy>=1.24.0
+requests>=2.31.0

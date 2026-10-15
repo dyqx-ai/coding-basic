@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VibeCoding AI - 智能代码助手</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#10b981',
+                        darkBg: '#0f1118',
+                        darkCard: '#171925',
+                        darkHover: '#212433',
+                        textGray: '#a9b2c3'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .glass {
+                background: rgba(23, 25, 37, 0.75);
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+                border: 1px solid rgba(255,255,255,0.08);
+            }
+            .glass-light {
+                background: rgba(255,255,255,0.05);
+                backdrop-filter: blur(6px);
+            }
+            .scrollbar-hide::-webkit-scrollbar {
+                display: none;
+            }
+            .scrollbar-hide {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+            .msg-animate {
+                animation: msgShow 0.3s ease forwards;
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            @keyframes msgShow {
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+            .pulse-ai {
+                animation: pulse 2s infinite;
+            }
+            @keyframes pulse {
+                0%,100% { opacity:1; }
+                50% { opacity:0.6; }
+            }
+            .typing-dots span {
+                animation: dotPulse 1.4s infinite;
+            }
+            .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+            .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+            @keyframes dotPulse {
+                0%,60%,100% { opacity:0.2; transform: translateY(0); }
+                30% { opacity:1; transform: translateY(-6px); }
+            }
+        }
+    </style>
+</head>
+<body class="bg-darkBg text-white h-screen flex flex-col overflow-hidden">
+    <!-- 顶部导航栏 -->
+    <header class="glass w-full h-14 flex items-center justify-between px-6 z-50 border-b border-white/10">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center font-bold text-white">
+                V
+            </div>
+            <span class="text-lg font-semibold tracking-wide">VibeCoding AI</span>
+        </div>
+        <div class="text-textGray text-sm">
+            智能代码生成 / 项目修改 / 对话助手
+        </div>
+    </header>
+
+    <!-- 主体内容 -->
+    <div class="flex flex-1 overflow-hidden">
+        <!-- 左侧会话侧边栏 -->
+        <aside class="w-[280px] glass border-r border-white/10 flex flex-col h-full">
+            <!-- 新建对话按钮 -->
+            <div class="p-4">
+                <button id="newChatBtn" class="w-full py-2.5 rounded-lg bg-primary hover:bg-primary/80 transition-all duration-300 flex items-center justify-center gap-2 font-medium shadow-lg shadow-primary/20">
+                    <i class="fa fa-plus"></i>
+                    新建对话
+                </button>
+            </div>
+
+            <div class="px-4 pb-2">
+                <p class="text-textGray text-xs">历史对话</p>
+            </div>
+
+            <!-- 会话列表 -->
+            <div id="convList" class="flex-1 overflow-y-auto scrollbar-hide px-2 pb-4 space-y-1">
+                <!-- 动态渲染会话 -->
+            </div>
+
+            <!-- 底部用户信息 -->
+            <div class="p-4 border-t border-white/10">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full bg-gradient-to-br from-secondary to-primary flex items-center justify-center text-white">
+                        <i class="fa fa-user"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-sm">默认用户</div>
+                        <div class="text-xs text-textGray">永久记忆已开启</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 右侧主聊天区域 -->
+        <main class="flex-1 flex flex-col h-full overflow-hidden">
+            <!-- 聊天内容区域 -->
+            <div id="chatContainer" class="flex-1 overflow-y-auto scrollbar-hide p-6 space-y-6">
+                <!-- 空白欢迎页 -->
+                <div id="welcomePage" class="h-full flex flex-col items-center justify-center">
+                    <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-3xl text-white shadow-xl shadow-primary/20">
+                        <i class="fa fa-robot"></i>
+                    </div>
+                    <h1 class="text-[28px] font-bold mb-3">VibeCoding AI 智能助手</h1>
+                    <p class="text-textGray max-w-xl text-center mb-8">
+                        我可以帮你从零完整生成前后端项目、修复代码Bug、迭代项目、日常智能对话，<br/>拥有长期记忆，记住你的开发习惯与项目需求。
+                    </p>
+                    <div class="grid grid-cols-2 gap-3 w-full max-w-lg">
+                        <div class="glass-light rounded-xl p-4 hover:bg-white/10 transition-all cursor-pointer card-prompt">
+                            <p class="text-sm text-textGray">💻 开发需求</p>
+                            <p class="text-sm mt-1 text-white">帮我写一个完整的 Todo 前后端项目</p>
+                        </div>
+                        <div class="glass-light rounded-xl p-4 hover:bg-white/10 transition-all cursor-pointer card-prompt">
+                            <p class="text-sm text-textGray">🔧 项目修改</p>
+                            <p class="text-sm mt-1 text-white">帮我修复当前项目的报错</p>
+                        </div>
+                        <div class="glass-light rounded-xl p-4 hover:bg-white/10 transition-all cursor-pointer card-prompt">
+                            <p class="text-sm text-textGray">💡 日常对话</p>
+                            <p class="text-sm mt-1 text-white">介绍一下你的能力</p>
+                        </div>
+                        <div class="glass-light rounded-xl p-4 hover:bg-white/10 transition-all cursor-pointer card-prompt">
+                            <p class="text-sm text-textGray">📝 需求澄清</p>
+                            <p class="text-sm mt-1 text-white">帮我优化项目架构</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 对话内容容器 -->
+                <div id="msgList" class="hidden space-y-6"></div>
+            </div>
+
+            <!-- 输入框区域 -->
+            <div class="px-6 pb-6">
+                <div class="glass rounded-2xl p-2 flex items-end gap-3">
+                    <textarea id="inputText" rows="1" placeholder="输入你的需求，Shift+Enter换行..." class="flex-1 bg-transparent outline-none resize-none text-sm px-3 py-2 max-h-32 text-white placeholder-textGray"></textarea>
+                    <button id="sendBtn" class="bg-primary w-10 h-10 rounded-xl flex items-center justify-center hover:bg-primary/80 transition-all text-white">
+                        <i class="fa fa-paper-plane"></i>
+                    </button>
+                </div>
+                <p class="text-[10px] text-textGray mt-2 text-center">AI 拥有长期记忆，会记住你的所有开发偏好与历史项目</p>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // ===================== 全局变量 =====================
+        const USER_ID = "default_user";
+        let currentConvId = "";
+        let isWaitingInput = false;
+        let waitingQuestions = [];
+
+        // ===================== 模式标签配置 =====================
+        const MODE_CONFIG = {
+            'simple': {
+                label: '⚡ 极简生成',
+                color: '#10b981',
+                borderColor: 'rgba(16, 185, 129, 0.3)'
+            },
+            'demo': {
+                label: '🧪 Demo模式',
+                color: '#f59e0b',
+                borderColor: 'rgba(245, 158, 11, 0.3)'
+            },
+            'complete': {
+                label: '🏗️ 工程模式',
+                color: '#8b5cf6',
+                borderColor: 'rgba(139, 92, 246, 0.3)'
+            },
+            'modify': {
+                label: '🔧 修改模式',
+                color: '#ef4444',
+                borderColor: 'rgba(239, 68, 68, 0.3)'
+            },
+            'unknown': {
+                label: '🤖 处理中',
+                color: '#6b7280',
+                borderColor: 'rgba(107, 114, 128, 0.3)'
+            }
+        };
+
+        // ===================== DOM引用 =====================
+        const convListEl = document.getElementById("convList");
+        const chatContainerEl = document.getElementById("chatContainer");
+        const welcomePageEl = document.getElementById("welcomePage");
+        const msgListEl = document.getElementById("msgList");
+        const inputTextEl = document.getElementById("inputText");
+        const sendBtnEl = document.getElementById("sendBtn");
+        const newChatBtnEl = document.getElementById("newChatBtn");
+
+        // 页面加载
+        window.onload = async function () {
+            await getConvList();
+            bindWelcomeCard();
+            inputTextEl.focus();
+        }
+
+        // ===================== 欢迎页快捷卡片 =====================
+        function bindWelcomeCard() {
+            document.querySelectorAll(".card-prompt").forEach(card => {
+                card.onclick = () => {
+                    const txt = card.querySelector("p:last-child").innerText.trim();
+                    inputTextEl.value = txt;
+                    inputTextEl.focus();
+                    inputTextEl.style.height = "auto";
+                    inputTextEl.style.height = Math.min(inputTextEl.scrollHeight, 128) + "px";
+                }
+            })
+        }
+
+        // ===================== ★ 修改对话名称 ★ =====================
+        function renameConv(convId, currentTitle) {
+            const newTitle = prompt('修改对话名称：', currentTitle);
+            if (newTitle === null) return; // 用户取消
+            const trimmed = newTitle.trim();
+            if (!trimmed) {
+                alert('名称不能为空');
+                return;
+            }
+
+            fetch('/api/conv/rename', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    conv_id: convId,
+                    title: trimmed
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.code === 0) {
+                    // 刷新列表，不刷新页面
+                    getConvList();
+                } else {
+                    alert(data.msg || '修改失败');
+                }
+            })
+            .catch(e => {
+                console.error('重命名失败:', e);
+                alert('重命名失败，请检查网络');
+            });
+        }
+
+        // ===================== 会话管理 =====================
+        async function getConvList() {
+            try {
+                const res = await fetch(`/api/conv/list?user_id=${USER_ID}`);
+                const json = await res.json();
+                renderConvList(json.data);
+            } catch (e) {
+                console.error("获取会话列表失败:", e);
+            }
+        }
+
+        function renderConvList(list) {
+            convListEl.innerHTML = "";
+            if (!list || list.length === 0) {
+                convListEl.innerHTML = `<div class="text-textGray text-xs text-center mt-10">暂无历史对话</div>`;
+                return;
+            }
+            list.forEach(item => {
+                const itemEl = document.createElement("div");
+                itemEl.className = `w-full rounded-lg px-3 py-2.5 flex justify-between items-center cursor-pointer transition-all duration-200 ${currentConvId === item.id ? 'bg-primary/20 border border-primary/30' : 'hover:bg-darkHover'}`;
+                itemEl.dataset.cid = item.id;
+                itemEl.innerHTML = `
+                    <span class="text-sm truncate flex-1 text-white conv-title"
+                          ondblclick="event.stopPropagation(); renameConv('${item.id}', '${escapeHtml(item.title)}')"
+                          title="双击修改名称">
+                        ${escapeHtml(item.title)}
+                    </span>
+                    <div class="flex items-center gap-1 flex-shrink-0">
+                        <i class="fa fa-pencil text-textGray hover:text-primary text-xs edit-icon"
+                           style="cursor:pointer; padding:4px; border-radius:4px;"
+                           onclick="event.stopPropagation(); renameConv('${item.id}', '${escapeHtml(item.title)}')"
+                           title="修改名称"></i>
+                        <i class="fa fa-trash-o text-textGray hover:text-red-400 del-icon"
+                           style="cursor:pointer; padding:4px; border-radius:4px;"
+                           onclick="event.stopPropagation(); delConv('${item.id}')"
+                           title="删除对话"></i>
+                    </div>
+                `;
+                convListEl.appendChild(itemEl);
+            })
+        }
+
+        async function switchConv(cid) {
+            if (isWaitingInput) {
+                isWaitingInput = false;
+                waitingQuestions = [];
+            }
+            currentConvId = cid;
+            welcomePageEl.classList.add("hidden");
+            msgListEl.classList.remove("hidden");
+            await getMsgHistory();
+            await getConvList();
+            inputTextEl.focus();
+        }
+
+        async function delConv(cid) {
+            if (!confirm('确定要删除这个对话吗？相关的记忆也会被清除。')) return;
+            try {
+                await fetch("/api/conv/clear", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ conv_id: cid })
+                });
+                if (currentConvId === cid) {
+                    currentConvId = "";
+                    isWaitingInput = false;
+                    waitingQuestions = [];
+                    welcomePageEl.classList.remove("hidden");
+                    msgListEl.classList.add("hidden");
+                    msgListEl.innerHTML = "";
+                }
+                await getConvList();
+            } catch (e) {
+                console.error("删除会话失败:", e);
+            }
+        }
+
+        // 给对话项绑定点击事件（通过事件委托）
+        convListEl.addEventListener('click', function(e) {
+            const item = e.target.closest('[data-cid]');
+            if (!item) return;
+            // 如果点击的是图标，由 onclick 处理，这里不再处理
+            if (e.target.closest('.del-icon') || e.target.closest('.edit-icon')) return;
+            switchConv(item.dataset.cid);
+        });
+
+        // ===================== 消息管理 =====================
+        async function getMsgHistory() {
+            try {
+                const res = await fetch(`/api/conv/history?conv_id=${currentConvId}`);
+                const json = await res.json();
+                renderMsg(json.data);
+            } catch (e) {
+                console.error("获取历史消息失败:", e);
+            }
+        }
+
+        function renderMsg(list) {
+            msgListEl.innerHTML = "";
+            if (!list || list.length === 0) return;
+            list.forEach(item => {
+                addMsg(item.role, item.content, null, false);
+            });
+            scrollBottom();
+        }
+
+        /**
+         * 添加消息到界面
+         * @param {string} role - 'user' 或 'assistant'
+         * @param {string} content - 消息内容
+         * @param {string|null} mode - 模式标识 (simple/demo/complete/modify/chat/null)
+         * @param {boolean} isAnimate - 是否启用动画
+         */
+        function addMsg(role, content, mode = null, isAnimate = true) {
+            const item = document.createElement("div");
+            const animateClass = isAnimate ? 'msg-animate' : '';
+
+            let modeLabelHtml = '';
+            if (role === "assistant" && mode && mode !== 'chat' && mode !== 'unknown') {
+                const config = MODE_CONFIG[mode];
+                if (config) {
+                    modeLabelHtml = `
+                        <div style="font-size: 10px; color: ${config.color}; margin-bottom: 3px; font-weight: 500; letter-spacing: 0.3px; display: flex; align-items: center; gap: 4px;">
+                            <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: ${config.color};"></span>
+                            ${config.label}
+                        </div>
+                    `;
+                }
+            }
+
+            if (role === "user") {
+                item.className = "flex justify-end";
+                item.innerHTML = `
+                    <div class="max-w-[75%] bg-primary rounded-2xl rounded-tr-none px-4 py-3 text-sm ${animateClass} whitespace-pre-wrap text-white">
+                        ${escapeHtml(content)}
+                    </div>
+                `;
+            } else {
+                item.className = "flex justify-start";
+                item.innerHTML = `
+                    <div class="max-w-[75%] glass rounded-2xl rounded-tl-none px-4 py-3 text-sm ${animateClass} whitespace-pre-wrap text-white">
+                        ${modeLabelHtml}
+                        ${escapeHtml(content)}
+                    </div>
+                `;
+            }
+            msgListEl.appendChild(item);
+            scrollBottom();
+        }
+
+        // 显示澄清问题
+        function addClarifyQuestion(questions) {
+            const qList = Array.isArray(questions) ? questions : [questions];
+            const qText = qList.map((q, i) => `${i+1}. ${q}`).join('\n');
+            const item = document.createElement("div");
+            item.className = "flex justify-start";
+            item.innerHTML = `
+                <div class="max-w-[75%] glass rounded-2xl rounded-tl-none px-4 py-3 text-sm msg-animate whitespace-pre-wrap text-white border border-primary/30">
+                    <div class="text-textGray text-xs mb-1">🤔 AI需要确认以下信息：</div>
+                    ${escapeHtml(qText)}
+                    <div class="text-textGray text-xs mt-2">请回答后再次发送</div>
+                </div>
+            `;
+            msgListEl.appendChild(item);
+            scrollBottom();
+        }
+
+        function scrollBottom() {
+            setTimeout(() => {
+                chatContainerEl.scrollTop = chatContainerEl.scrollHeight;
+            }, 50);
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ===================== 发送消息 =====================
+        function showTyping() {
+            const item = document.createElement("div");
+            item.id = "typingIndicator";
+            item.className = "flex justify-start";
+            item.innerHTML = `
+                <div class="glass rounded-2xl rounded-tl-none px-4 py-3 text-sm text-textGray flex items-center gap-1">
+                    <span class="typing-dots flex gap-1">
+                        <span class="w-2 h-2 rounded-full bg-textGray inline-block"></span>
+                        <span class="w-2 h-2 rounded-full bg-textGray inline-block"></span>
+                        <span class="w-2 h-2 rounded-full bg-textGray inline-block"></span>
+                    </span>
+                </div>
+            `;
+            msgListEl.appendChild(item);
+            scrollBottom();
+        }
+
+        function hideTyping() {
+            const el = document.getElementById("typingIndicator");
+            if (el) el.remove();
+        }
+
+        // ===================== 长任务进度轮询 =====================
+        // 背景：生成代码是长任务（1~5 分钟），请求挂着没有反馈时用户只能刷新页面。
+        // 该轮询在请求等待期间每 3 秒增量拉取历史消息（后端子图节点实时写入进度），
+        // 让用户实时看到"正在生成 → 正在测试 → 修复重试"全过程，无需刷新。
+        let progressTimer = null;
+        let pollerRenderedCount = 0;
+        let pollerFirstRun = true;
+        let lastPollerAssistantContent = null;
+
+        function startProgressPolling() {
+            stopProgressPolling();
+            pollerFirstRun = true;
+            lastPollerAssistantContent = null;
+            pollerRenderedCount = 0;
+            progressTimer = setInterval(async () => {
+                if (!currentConvId) return;
+                try {
+                    const res = await fetch(`/api/conv/history?conv_id=${currentConvId}`);
+                    const json = await res.json();
+                    const list = json.data || [];
+                    if (pollerFirstRun) {
+                        // 首次拉取只对齐基线（当前历史已渲染），之后只增量渲染新消息
+                        pollerRenderedCount = list.length;
+                        const lastA = [...list].reverse().find(m => m.role === "assistant");
+                        lastPollerAssistantContent = lastA ? lastA.content : null;
+                        pollerFirstRun = false;
+                        return;
+                    }
+                    while (pollerRenderedCount < list.length) {
+                        const item = list[pollerRenderedCount];
+                        addMsg(item.role, item.content, null, false);
+                        if (item.role === "assistant") {
+                            lastPollerAssistantContent = item.content;
+                        }
+                        pollerRenderedCount++;
+                    }
+                } catch (e) { /* 轮询失败静默，不干扰主请求 */ }
+            }, 3000);
+        }
+
+        function stopProgressPolling() {
+            if (progressTimer) {
+                clearInterval(progressTimer);
+                progressTimer = null;
+            }
+        }
+
+        sendBtnEl.onclick = handleSend;
+        inputTextEl.onkeydown = function(e) {
+            if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+            }
+        };
+
+        inputTextEl.addEventListener("input", function() {
+            this.style.height = "auto";
+            this.style.height = Math.min(this.scrollHeight, 128) + "px";
+        });
+
+        async function handleSend() {
+            const val = inputTextEl.value.trim();
+            if (!val) return;
+
+            if (isWaitingInput) {
+                await sendResume(val);
+                return;
+            }
+
+            await sendChat(val);
+        }
+
+        // 普通对话发送
+        async function sendChat(val) {
+            inputTextEl.value = "";
+            inputTextEl.style.height = "auto";
+            addMsg("user", val);
+
+            showTyping();
+            startProgressPolling();
+
+            try {
+                const res = await fetch("/api/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        user_id: USER_ID,
+                        conv_id: currentConvId || undefined,
+                        content: val
+                    })
+                });
+                const json = await res.json();
+                hideTyping();
+                stopProgressPolling();
+
+                if (json.code === -1) {
+                    addMsg("assistant", "❌ " + json.msg, null);
+                    return;
+                }
+
+                if (json.conv_id && !currentConvId) {
+                    currentConvId = json.conv_id;
+                    await getConvList();
+                }
+
+                // 检查中断（等待用户输入）
+                if (json.code === 1 && json.msg === "agent_wait_input") {
+                    const data = json.data || {};
+                    const questions = data.clarify_questions || data.interrupt_payload || [];
+                    if (questions && questions.length > 0) {
+                        isWaitingInput = true;
+                        waitingQuestions = Array.isArray(questions) ? questions : [questions];
+                        addClarifyQuestion(waitingQuestions);
+                        inputTextEl.placeholder = "请输入补充信息...";
+                    } else {
+                        isWaitingInput = true;
+                        addMsg("assistant", "请补充更多信息以便继续。", null);
+                        inputTextEl.placeholder = "请输入补充信息...";
+                    }
+                    return;
+                }
+
+                // 正常回复 - 轮询可能已经渲染过同内容消息，去重
+                if (json.reply) {
+                    const mode = json.mode || null;
+                    if (json.reply !== lastPollerAssistantContent) {
+                        addMsg("assistant", json.reply, mode);
+                    }
+                }
+
+                await getConvList();
+
+            } catch (err) {
+                hideTyping();
+                stopProgressPolling();
+                addMsg("assistant", "❌ 网络错误，请检查后端服务是否正常启动", null);
+                console.error(err);
+            }
+
+            inputTextEl.focus();
+        }
+
+        // 恢复中断（用户补充信息）
+        async function sendResume(val) {
+            inputTextEl.value = "";
+            inputTextEl.style.height = "auto";
+
+            addMsg("user", val);
+
+            isWaitingInput = false;
+            waitingQuestions = [];
+
+            showTyping();
+            startProgressPolling();
+
+            try {
+                const res = await fetch("/api/agent/resume", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        user_id: USER_ID,
+                        conv_id: currentConvId,
+                        content: val
+                    })
+                });
+                const json = await res.json();
+                hideTyping();
+                stopProgressPolling();
+
+                if (json.code === -1) {
+                    addMsg("assistant", "❌ " + json.msg, null);
+                    inputTextEl.placeholder = "输入你的需求，Shift+Enter换行...";
+                    return;
+                }
+
+                // 检查是否又触发了中断
+                if (json.code === 1 && json.msg === "agent_wait_input") {
+                    const data = json.data || {};
+                    const questions = data.clarify_questions || data.interrupt_payload || [];
+                    if (questions && questions.length > 0) {
+                        isWaitingInput = true;
+                        waitingQuestions = Array.isArray(questions) ? questions : [questions];
+                        addClarifyQuestion(waitingQuestions);
+                        inputTextEl.placeholder = "请输入补充信息...";
+                    } else {
+                        isWaitingInput = true;
+                        addMsg("assistant", "请继续补充更多信息。", null);
+                        inputTextEl.placeholder = "请输入补充信息...";
+                    }
+                    return;
+                }
+
+                // 正常回复 - 轮询可能已经渲染过同内容消息，去重
+                if (json.reply) {
+                    const mode = json.mode || null;
+                    if (json.reply !== lastPollerAssistantContent) {
+                        addMsg("assistant", json.reply, mode);
+                    }
+                }
+
+                isWaitingInput = false;
+                waitingQuestions = [];
+                inputTextEl.placeholder = "输入你的需求，Shift+Enter换行...";
+                await getConvList();
+
+            } catch (err) {
+                hideTyping();
+                stopProgressPolling();
+                addMsg("assistant", "❌ 网络错误，请检查后端服务是否正常启动", null);
+                console.error(err);
+            }
+
+            inputTextEl.focus();
+        }
+
+        // ===================== 新建对话 =====================
+        newChatBtnEl.onclick = async function() {
+            try {
+                const res = await fetch("/api/conv/new", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ user_id: USER_ID, title: "新对话" })
+                });
+                const json = await res.json();
+                currentConvId = json.conv_id;
+                isWaitingInput = false;
+                waitingQuestions = [];
+                inputTextEl.placeholder = "输入你的需求，Shift+Enter换行...";
+                welcomePageEl.classList.add("hidden");
+                msgListEl.classList.remove("hidden");
+                msgListEl.innerHTML = "";
+                await getConvList();
+                inputTextEl.focus();
+            } catch (e) {
+                console.error("新建会话失败:", e);
+            }
+        }
+
+        // ===================== 快捷键 =====================
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                inputTextEl.focus();
+            }
+        });
+
+        chatContainerEl.addEventListener('click', function(e) {
+            if (e.target === chatContainerEl || e.target === msgListEl) {
+                inputTextEl.focus();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VibeCoding AI - 智能代码助手</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#10b981',
+                        darkBg: '#0f1118',
+                        darkCard: '#171925',
+                        darkHover: '#212433',
+                        textGray: '#a9b2c3'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .glass {
+                background: rgba(23, 25, 37, 0.75);
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+                border: 1px solid rgba(255,255,255,0.08);
+            }
+            .glass-light {
+                background: rgba(255,255,255,0.05);
+                backdrop-filter: blur(6px);
+            }
+            .scrollbar-hide::-webkit-scrollbar {
+                display: none;
+            }
+            .scrollbar-hide {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+            .msg-animate {
+                animation: msgShow 0.3s ease forwards;
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            @keyframes msgShow {
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+            .pulse-ai {
+                animation: pulse 2s infinite;
+            }
+            @keyframes pulse {
+                0%,100% { opacity:1; }
+                50% { opacity:0.6; }
+            }
+        }
+    </style>
+</head>
+<body class="bg-darkBg text-white h-screen flex flex-col overflow-hidden">
+    <!-- 顶部导航栏 -->
+    <header class="glass w-full h-14 flex items-center justify-between px-6 z-50 border-b border-white/10">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center font-bold">
+                V
+            </div>
+            <span class="text-lg font-semibold tracking-wide">VibeCoding AI</span>
+        </div>
+        <div class="text-textGray text-sm">
+            智能代码生成 / 项目修改 / 对话助手
+        </div>
+    </header>
+
+    <!-- 主体内容 -->
+    <div class="flex flex-1 overflow-hidden">
+        <!-- 左侧会话侧边栏 -->
+        <aside class="w-[280px] glass border-r border-white/10 flex flex-col h-full">
+            <!-- 新建对话按钮 -->
+            <div class="p-4">
+                <button id="newChatBtn" class="w-full py-2.5 rounded-lg bg-primary hover:bg-primary/80 transition-all duration-300 flex items-center justify-center gap-2 font-medium shadow-lg shadow-primary/20">
+                    <i class="fa fa-plus"></i>
+                    新建对话
+                </button>
+            </div>
+
+            <div class="px-4 pb-2">
+                <p class="text-textGray text-xs">历史对话</p>
+            </div>
+
+            <!-- 会话列表 -->
+            <div id="convList" class="flex-1 overflow-y-auto scrollbar-hide px-2 pb-4 space-y-1">
+                <!-- 动态渲染会话 -->
+            </div>
+
+            <!-- 底部用户信息 -->
+            <div class="p-4 border-t border-white/10">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full bg-gradient-to-br from-secondary to-primary flex items-center justify-center">
+                        <i class="fa fa-user"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-sm">默认用户</div>
+                        <div class="text-xs text-textGray">永久记忆已开启</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 右侧主聊天区域 -->
+        <main class="flex-1 flex flex-col h-full overflow-hidden">
+            <!-- 聊天内容区域 -->
+            <div id="chatContainer" class="flex-1 overflow-y-auto scrollbar-hide p-6 space-y-6">
+                <!-- 空白欢迎页 -->
+                <div id="welcomePage" class="h-full flex flex-col items-center justify-center">
+                    <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-3xl mb-6 shadow-xl shadow-primary/20">
+                        <i class="fa fa-robot"></i>
+                    </div>
+                    <h1 class="text-[28px] font-bold mb-3">VibeCoding AI 智能助手</h1>
+                    <p class="text-textGray max-w-xl text-center mb-8">
+                        我可以帮你从零完整生成前后端项目、修复代码Bug、迭代项目、日常智能对话，<br/>拥有长期记忆，记住你的开发习惯与项目需求。
+                    </p>
+                    <div class="grid grid-cols-2 gap-3 w-full max-w-lg">
+                        <div class="glass-light rounded-xl p-4 hover:bg-white/10 transition-all cursor-pointer">
+                            <p class="text-sm text-textGray">💻 开发需求</p>
+                            <p class="text-sm mt-1">帮我写一个完整的 Todo 前后端项目</p>
+                        </div>
+                        <div class="glass-light rounded-xl p-4 hover:bg-white/10 transition-all cursor-pointer">
+                            <p class="text-sm text-textGray">🔧 项目修改</p>
+                            <p class="text-sm mt-1">帮我修复当前项目的报错</p>
+                        </div>
+                        <div class="glass-light rounded-xl p-4 hover:bg-white/10 transition-all cursor-pointer">
+                            <p class="text-sm text-textGray">💡 日常对话</p>
+                            <p class="text-sm mt-1">介绍一下你的能力</p>
+                        </div>
+                        <div class="glass-light rounded-xl p-4 hover:bg-white/10 transition-all cursor-pointer">
+                            <p class="text-sm text-textGray">📝 需求澄清</p>
+                            <p class="text-sm mt-1">帮我优化项目架构</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 对话内容容器 -->
+                <div id="msgList" class="hidden space-y-6"></div>
+            </div>
+
+            <!-- 输入框区域 -->
+            <div class="px-6 pb-6">
+                <div class="glass rounded-2xl p-2 flex items-end gap-3">
+                    <textarea id="inputText" rows="1" placeholder="输入你的需求，Shift+Enter换行..." class="flex-1 bg-transparent outline-none resize-none text-sm px-3 py-2 max-h-32"></textarea>
+                    <button id="sendBtn" class="bg-primary w-10 h-10 rounded-xl flex items-center justify-center hover:bg-primary/80 transition-all">
+                        <i class="fa fa-paper-plane"></i>
+                    </button>
+                </div>
+                <p class="text-[10px] text-textGray mt-2 text-center">AI 拥有长期记忆，会记住你的所有开发偏好与历史项目</p>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // 全局变量
+        const USER_ID = "default_user";
+        let currentConvId = "";
+
+        // DOM
+        const convListEl = document.getElementById("convList");
+        const chatContainerEl = document.getElementById("chatContainer");
+        const welcomePageEl = document.getElementById("welcomePage");
+        const msgListEl = document.getElementById("msgList");
+        const inputTextEl = document.getElementById("inputText");
+        const sendBtnEl = document.getElementById("sendBtn");
+        const newChatBtnEl = document.getElementById("newChatBtn");
+
+        // 页面加载获取会话列表
+        window.onload = async function () {
+            await getConvList();
+        }
+
+        // 获取会话列表
+        async function getConvList() {
+            const res = await fetch(`/api/conv/list?user_id=${USER_ID}`)
+            const json = await res.json();
+            renderConvList(json.data);
+        }
+
+        // 渲染会话列表
+        // 渲染会话列表
+        function renderConvList(list) {
+            convListEl.innerHTML = "";
+            if(list.length === 0) {
+                convListEl.innerHTML = `<div class="text-textGray text-xs text-center mt-10">暂无历史对话</div>`;
+                return;
+            }
+            list.forEach(item => {
+                const itemEl = document.createElement("div");
+                itemEl.className = `w-full rounded-lg px-3 py-2.5 flex justify-between items-center cursor-pointer transition-all duration-200 ${currentConvId === item.id ? 'bg-primary/20 border border-primary/30' : 'hover:bg-darkHover'}`;
+                itemEl.dataset.cid = item.id;
+                itemEl.innerHTML = `
+                    <span class="text-sm truncate flex-1">${item.title}</span>
+                    <i class="fa fa-trash-o text-textGray hover:text-red-400 del-icon"></i>
+                `;
+                itemEl.onclick = (e) => {
+                    // 使用closest向上查找，不管点图标内部还是图标本身都能识别删除按钮
+                    const delIcon = e.target.closest('.del-icon');
+                    if(delIcon){
+                        delConv(item.id);
+                        e.stopPropagation(); //阻止冒泡，不会触发切换会话
+                        return;
+                    }
+                    switchConv(item.id);
+                }
+                convListEl.appendChild(itemEl);
+            })
+        }
+
+
+        // 切换会话
+        async function switchConv(cid) {
+            currentConvId = cid;
+            welcomePageEl.classList.add("hidden");
+            msgListEl.classList.remove("hidden");
+            await getMsgHistory();
+            getConvList();
+        }
+
+        // 获取历史消息
+        async function getMsgHistory() {
+            const res = await fetch(`/api/conv/history?conv_id=${currentConvId}`);
+            const json = await res.json();
+            renderMsg(json.data);
+        }
+
+        // 渲染消息
+        function renderMsg(list) {
+            msgListEl.innerHTML = "";
+            list.forEach(item => {
+                addMsg(item.role, item.content, false);
+            })
+            scrollBottom();
+        }
+
+        // 新增单条消息
+        function addMsg(role, content, isAnimate = true) {
+            const item = document.createElement("div");
+            if(role === "user"){
+                item.className = "flex justify-end";
+                item.innerHTML = `
+                    <div class="max-w-[75%] bg-primary rounded-2xl rounded-tr-none px-4 py-3 text-sm ${isAnimate?'msg-animate':''}">
+                        ${content}
+                    </div>
+                `
+            }else{
+                item.className = "flex justify-start";
+                item.innerHTML = `
+                    <div class="max-w-[75%] glass rounded-2xl rounded-tl-none px-4 py-3 text-sm ${isAnimate?'msg-animate':''}">
+                        ${content}
+                    </div>
+                `
+            }
+            msgListEl.appendChild(item);
+            scrollBottom();
+        }
+
+        // 滚动到底部
+        function scrollBottom() {
+            chatContainerEl.scrollTop = chatContainerEl.scrollHeight;
+        }
+
+        // 新建对话
+        newChatBtnEl.onclick = async function() {
+            const res = await fetch("/api/conv/new",{
+                method:"POST",
+                headers:{"Content-Type":"application/json"},
+                body:JSON.stringify({user_id:USER_ID, title:"新对话"})
+            })
+            const json = await res.json();
+            currentConvId = json.conv_id;
+            welcomePageEl.classList.add("hidden");
+            msgListEl.classList.remove("hidden");
+            msgListEl.innerHTML = "";
+            getConvList();
+        }
+
+        // 删除会话
+        async function delConv(cid) {
+            await fetch("/api/conv/clear",{
+                method:"POST",
+                headers:{"Content-Type":"application/json"},
+                body:JSON.stringify({conv_id:cid})
+            })
+            if(currentConvId === cid){
+                currentConvId = "";
+                welcomePageEl.classList.remove("hidden");
+                msgListEl.classList.add("hidden");
+                msgListEl.innerHTML = "";
+            }
+            getConvList();
+        }
+
+        // 发送消息
+        sendBtnEl.onclick = sendChat;
+        inputTextEl.onkeydown = function(e) {
+            if(e.key === "Enter" && !e.shiftKey){
+                e.preventDefault();
+                sendChat();
+            }
+        }
+
+        async function sendChat() {
+            const val = inputTextEl.value.trim();
+            if(!val) return;
+            inputTextEl.value = "";
+
+            // 添加用户消息
+            addMsg("user", val);
+
+            // loading
+            const loading = document.createElement("div");
+            loading.className = "flex justify-start";
+            loading.innerHTML = `<div class="glass rounded-2xl rounded-tl-none px-4 py-3 text-sm text-textGray pulse-ai">AI思考中...</div>`;
+            msgListEl.appendChild(loading);
+            scrollBottom();
+
+            // 请求接口
+            const res = await fetch("/api/chat",{
+                method:"POST",
+                headers:{"Content-Type":"application/json"},
+                body:JSON.stringify({
+                    user_id: USER_ID,
+                    conv_id: currentConvId,
+                    content: val
+                })
+            })
+            const json = await res.json();
+
+            // 移除loading
+            loading.remove();
+
+            // 赋值会话ID（首次对话自动新建）
+            if(!currentConvId) currentConvId = json.conv_id;
+
+            // 添加AI回复
+            addMsg("assistant", json.reply);
+
+            // 刷新会话列表
+            getConvList();
+        }
+
+        // 自动高度
+        inputTextEl.addEventListener("input",function(){
+            this.style.height = "auto";
+            this.style.height = (this.scrollHeight>32?Math.min(this.scrollHeight,128):32)+"px";
+        })
+    </script>
+</body>
+</html>
